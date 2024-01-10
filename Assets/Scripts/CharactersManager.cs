@@ -77,6 +77,7 @@ public class CharactersManager : MonoBehaviour
     {
         Leader = leader;
         leader.GetComponent<CharacterController>().isLeader = true;
+        CameraController.target = Leader.transform;
     }
 
     void LoadCharactersStats()
