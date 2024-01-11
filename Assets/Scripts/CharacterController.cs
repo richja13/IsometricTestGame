@@ -18,6 +18,9 @@ public class CharacterController : MonoBehaviour
     public bool CanWalk;
     public bool isLeader;
 
+    Vector3[] path;
+    int targetIndex;
+
     private void Awake()
     {
         _agent = GetComponent<NavMeshAgent>();
@@ -35,9 +38,9 @@ public class CharacterController : MonoBehaviour
         if (isLeader)
         {
             SetPosition();
-            MoveToPosition(Destination);
+            //MoveToPosition(Destination);
         }
-        else
+       else
             MoveToPosition(CharactersManager.Leader.transform.position);
     }
 
@@ -64,6 +67,42 @@ public class CharacterController : MonoBehaviour
         {
             Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit)) Destination = hit.point;
+            if (Destination == null) return;
+            PathRequestManager.RequestPath(transform.position, Destination, OnPathFound);
+        }
+    }
+
+    public void OnPathFound(Vector3[] newPath, bool pathSuccessfull)
+    {
+        if (pathSuccessfull)
+        {
+            path = newPath;
+            StopCoroutine("FollowPath");
+            StartCoroutine("FollowPath");
+            Debug.Log("Path lenght" + path.Length);
+        }
+    }
+
+    IEnumerator FollowPath()
+    {
+        Vector3 currentWaypoint = path[0];
+        
+        while(true)
+        {
+            //if(transform.position == currentWaypoint)
+            var distance = Vector2.Distance(transform.position, currentWaypoint);
+            Debug.Log("Distance: " + distance);
+            if(distance < 1.1f)
+            {
+                targetIndex++;
+                if (targetIndex >= path.Length)
+                {
+                    yield break;
+                }
+                currentWaypoint = path[targetIndex];
+            }
+            transform.position = Vector3.MoveTowards(transform.position, currentWaypoint, Speed * Time.deltaTime);
+            yield return null;
         }
     }
 
@@ -98,4 +137,26 @@ public class CharacterController : MonoBehaviour
         stamina = Durability;
         CanWalk = true;
     }
-}
+
+    public void OnDrawGizmos()
+    {
+        if (path != null)
+        {
+            for (int i = targetIndex; i < path.Length; i++)
+            {
+                Gizmos.color = Color.black;
+                Gizmos.DrawCube(path[i], Vector3.one);
+
+                if (i == targetIndex)
+                {
+                    Gizmos.DrawLine(transform.position, path[i]);
+                }
+                else
+                {
+                    Gizmos.DrawLine(path[i - 1], path[i]);
+                }
+            }
+        }
+    }
+
+    }

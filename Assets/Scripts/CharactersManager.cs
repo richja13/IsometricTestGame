@@ -69,15 +69,14 @@ public class CharactersManager : MonoBehaviour
             character.GetComponent<CharacterController>().isLeader = false;
         }
 
-        SpawnedCharacters[CharacterID].GetComponent<CharacterController>().isLeader = true;
-        Leader = SpawnedCharacters[CharacterID];
+        SetLeader(SpawnedCharacters[CharacterID]);
     }
 
     private void SetLeader(GameObject leader)
     {
         Leader = leader;
         leader.GetComponent<CharacterController>().isLeader = true;
-        CameraController.target = Leader.transform;
+        CameraController.target = leader.transform;
     }
 
     void LoadCharactersStats()
