@@ -7,23 +7,26 @@ using static UnityEditor.PlayerSettings;
 
 public class CharacterController : MonoBehaviour
 {
+    const float pathUpdateMoveThreshold = .5f;
+    const float minPathUpdateTime = .2f;
+
     public float Durability;
     public float Speed;
     public float Agility;
     private float stamina;
 
-    public NavMeshAgent _agent;
     public Camera _camera;
     private Vector3 Destination = Vector3.zero;
     public bool CanWalk;
     public bool isLeader;
+    Path path;
+    private float turnDst = 1;
 
-    Vector3[] path;
-    int targetIndex;
+    public Animator _animator;
 
     private void Awake()
     {
-        _agent = GetComponent<NavMeshAgent>();
+        //_agent = GetComponent<NavMeshAgent>();
         _camera = Camera.main;
         CanWalk = true;
     }
@@ -31,17 +34,13 @@ public class CharacterController : MonoBehaviour
     private void Start()
     {
         LoadParameters(Durability, Speed, Agility);
+
+        StartCoroutine(UpdatePath());
     }
 
     void Update()
     {
-        if (isLeader)
-        {
-            SetPosition();
-            //MoveToPosition(Destination);
-        }
-       else
-            MoveToPosition(CharactersManager.Leader.transform.position);
+        SetPosition();
     }
 
     public void LoadParameters(float speed, float agility, float durability)
@@ -52,12 +51,10 @@ public class CharacterController : MonoBehaviour
         Durability = durability;
         Agility = agility;
         stamina = Durability;
-        _agent.speed = Speed;
     }
 
     public void MoveToPosition(Vector3 pos)
     {
-        _agent.SetDestination(pos);
         StopCharacter();
     }
 
@@ -68,41 +65,72 @@ public class CharacterController : MonoBehaviour
             Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit)) Destination = hit.point;
             if (Destination == null) return;
-            PathRequestManager.RequestPath(transform.position, Destination, OnPathFound);
+            _animator.SetBool("Running", true);
+            var target = (isLeader) ? Destination : CharactersManager.Leader.transform.position;
+            PathRequestManager.instance.RequestPath(transform.position, target, OnPathFound);
         }
     }
 
-    public void OnPathFound(Vector3[] newPath, bool pathSuccessfull)
+    public void OnPathFound(Vector3[] waypoints, bool pathSuccessfull)
     {
         if (pathSuccessfull)
         {
-            path = newPath;
+            path = new Path(waypoints, transform.position, turnDst);
             StopCoroutine("FollowPath");
             StartCoroutine("FollowPath");
-            Debug.Log("Path lenght" + path.Length);
         }
     }
 
     IEnumerator FollowPath()
     {
-        Vector3 currentWaypoint = path[0];
-        
+        bool followingPath = true;
+        int pathIndex = 0;
+
+        transform.LookAt(path.lookPoints[0]);
+        while(followingPath)
+        {
+            Vector2 pos2D = new(transform.position.x, transform.position.z);
+            while (path.turnBoundaries[pathIndex].HasCrossedLine(pos2D))
+            {
+                if (pathIndex == path.finishLineIndex)
+                {
+                    _animator.SetBool("Running", false);
+                    followingPath = false;
+                    break;
+                }
+                else
+                    pathIndex++;
+            }
+
+            if (followingPath)
+            {
+                Quaternion targetRotation = Quaternion.LookRotation(path.lookPoints[pathIndex] - transform.position);
+                transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * Agility/5f);
+                transform.Translate(Vector3.forward * Time.deltaTime * Speed, Space.Self);
+            }
+
+            yield return null;
+        }
+    }
+
+    IEnumerator UpdatePath()
+    {
+        var target = (isLeader) ? Destination : CharactersManager.Leader.transform.position;
+
+        if (Time.timeSinceLevelLoad < .3f)
+            yield return new WaitForSeconds(.3f);
+
+        PathRequestManager.instance.RequestPath(transform.position, target, OnPathFound);
+
+        float sqrMoveTreshold = pathUpdateMoveThreshold * pathUpdateMoveThreshold;
+        Vector3 targetPosOld = target;
+
         while(true)
         {
-            //if(transform.position == currentWaypoint)
-            var distance = Vector2.Distance(transform.position, currentWaypoint);
-            Debug.Log("Distance: " + distance);
-            if(distance < 1.1f)
-            {
-                targetIndex++;
-                if (targetIndex >= path.Length)
-                {
-                    yield break;
-                }
-                currentWaypoint = path[targetIndex];
-            }
-            transform.position = Vector3.MoveTowards(transform.position, currentWaypoint, Speed * Time.deltaTime);
-            yield return null;
+            yield return new WaitForSeconds(minPathUpdateTime);
+            if((target - targetPosOld).sqrMagnitude > sqrMoveTreshold)
+                PathRequestManager.instance.RequestPath(transform.position, target, OnPathFound);
+            targetPosOld = target;
         }
     }
 
@@ -110,16 +138,16 @@ public class CharacterController : MonoBehaviour
     {
         if (!CanWalk)
         {
-            _agent.isStopped = true;
+            //_agent.isStopped = true;
             StartCoroutine(CharacterRest());
         }
         else
         {
-            _agent.isStopped = false;
+            //_agent.isStopped = false;
         }
 
-        if(_agent.velocity.x != 0 && _agent.velocity.z != 0)
-            DurabilitySystem();
+        //if(_agent.velocity.x != 0 && _agent.velocity.z != 0)
+         //   DurabilitySystem();
     }
 
     void DurabilitySystem()
@@ -142,20 +170,7 @@ public class CharacterController : MonoBehaviour
     {
         if (path != null)
         {
-            for (int i = targetIndex; i < path.Length; i++)
-            {
-                Gizmos.color = Color.black;
-                Gizmos.DrawCube(path[i], Vector3.one);
-
-                if (i == targetIndex)
-                {
-                    Gizmos.DrawLine(transform.position, path[i]);
-                }
-                else
-                {
-                    Gizmos.DrawLine(path[i - 1], path[i]);
-                }
-            }
+            path.DrawWithGizmos();
         }
     }
 

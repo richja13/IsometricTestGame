@@ -10,11 +10,12 @@ public class SpawningCharactersManager : ScriptableObject, ICharacter
     public float Speed { get; set; }
     public float Agility { get; set; }
     public float Durability { get; set; }
+    public GameObject Model;
 
     private void OnEnable()
     {
         Durability = GenerateRandomStats.GenerateRandomValue(1, 4);
-        Speed = GenerateRandomStats.GenerateRandomValue(2, 6);
+        Speed = GenerateRandomStats.GenerateRandomValue(5, 12);
         Agility = GenerateRandomStats.GenerateRandomValue(5, 12);
     }
 }

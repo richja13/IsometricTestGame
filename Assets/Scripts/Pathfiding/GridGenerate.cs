@@ -83,11 +83,11 @@ public class GridGenerate : MonoBehaviour
 
     public List<Node> path;
 
-    /*private void OnDrawGizmos()
+    private void OnDrawGizmos()
     {
         Gizmos.DrawWireCube(transform.position, new Vector3(gridWorldSize.x, 1, gridWorldSize.y));
-        if(grid is not null)
-            foreach(Node n in grid)
+        if (grid is not null)
+            foreach (Node n in grid)
             {
                 Gizmos.color = (n.walkable) ? Color.white : Color.red;
                 if (path is not null)
@@ -98,5 +98,5 @@ public class GridGenerate : MonoBehaviour
                     }
                 Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiamater - 0.1f));
             };
-    }*/
+    }
 }

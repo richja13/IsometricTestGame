@@ -36,17 +36,17 @@ public class CharactersManager : MonoBehaviour
         for (int i = 0; i < spawnCharacters.Length; i++)
         {
             GameObject currentCharacter = Instantiate(CharacterToSpawn, spawnCharacters[i].spawnPoints, Quaternion.identity);
+            var model = Instantiate(spawnCharacters[i].Model, currentCharacter.transform.position, Quaternion.identity);
+            model.transform.parent = currentCharacter.transform;
+
             var character = spawnCharacters[i];
             currentCharacter.name = character.characterName;
+
             var controller = currentCharacter.GetComponent<CharacterController>();
             controller.Speed = character.Speed;
             controller.Durability = character.Durability;
             controller.Agility = character.Agility;
-
-            var agent = currentCharacter.GetComponent<NavMeshAgent>();
-            agent.speed = spawnCharacters[i].Speed;
-            agent.stoppingDistance = 2;
-
+            controller._animator = model.GetComponent<Animator>();
 
             SpawnedCharacters.Add(currentCharacter);
             if (i is 0) SetLeader(currentCharacter);

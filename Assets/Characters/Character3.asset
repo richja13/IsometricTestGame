@@ -13,7 +13,5 @@ MonoBehaviour:
   m_Name: Character3
   m_EditorClassIdentifier: 
   characterName: Veronica
-  spawnPoints: {x: 2, y: 3.35, z: 1}
-  Speed: 0
-  Agility: 0
-  Durability: 0
+  spawnPoints: {x: 0, y: 0, z: 0.5}
+  Model: {fileID: 8376167062438856793, guid: aede6515fb338b64ba1e6aae893c096f, type: 3}
