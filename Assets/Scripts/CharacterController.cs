@@ -1,11 +1,7 @@
 using System.Collections;
-using System.Collections.Generic;
-using System.ComponentModel;
-using Unity.Burst.CompilerServices;
+using UnityEditor.Build;
 using UnityEngine;
-using UnityEngine.AI;
-using static UnityEditor.PlayerSettings;
-using static UnityEngine.GraphicsBuffer;
+using UnityEngine.UI;
 
 public class CharacterController : MonoBehaviour
 {
@@ -25,12 +21,12 @@ public class CharacterController : MonoBehaviour
     private float turnDst = 1;
 
     public Animator _animator;
-    public Rigidbody _rb;
+    bool followingPath = false;
+    public Slider staminaBar;
 
     private void Awake()
     {
         _camera = Camera.main;
-        _rb = GetComponent<Rigidbody>();
         CanWalk = true;
     }
 
@@ -38,28 +34,25 @@ public class CharacterController : MonoBehaviour
     {
         LoadParameters(Durability, Speed, Agility);
         StartCoroutine(UpdatePath());
+        staminaBar.maxValue = Durability;
     }
 
     void Update()
     {
         SetPosition();
+        StopCharacter();
     }
 
     public void LoadParameters(float speed, float agility, float durability)
     {
         CharacterController leader = CharactersManager.Leader.GetComponent<CharacterController>();
-        Speed = (leader.Speed < speed) ? leader.Speed : speed;
+        //Speed = (leader.Speed < speed) ? leader.Speed : speed;
+        Speed = speed;
 
         Durability = durability;
         Agility = agility;
         stamina = Durability;
     }
-
-    public void MoveToPosition(Vector3 pos)
-    {
-        StopCharacter();
-    }
-
 
     void SetPosition()
     {
@@ -76,7 +69,6 @@ public class CharacterController : MonoBehaviour
     {
         if (pathSuccessfull)
         {
-            _animator.SetBool("Running", true);
             path = new Path(waypoints, transform.position, turnDst);
             if (waypoints.Length is 0) return;
             StopCoroutine("FollowPath");
@@ -86,7 +78,7 @@ public class CharacterController : MonoBehaviour
 
     public IEnumerator FollowPath()
     {
-        bool followingPath = true;
+        followingPath = true;
         int pathIndex = 0;
         transform.LookAt(path.lookPoints[0]);
 
@@ -113,21 +105,18 @@ public class CharacterController : MonoBehaviour
                     };
             }
 
-            Debug.Log(Vector3.Distance(path.lookPoints[pathIndex], path.lookPoints[path.finishLineIndex]));
-
             if (followingPath)
             {
-                Quaternion targetRotation = Quaternion.LookRotation(path.lookPoints[pathIndex] - transform.position);
-                transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * Agility/5f);
-                transform.Translate(Vector3.forward * Speed * Time.deltaTime, Space.Self);
-
-                //Vector3 localVelocity = transform.forward * Speed * Time.fixedDeltaTime * 80;
-                //_rb.velocity = localVelocity;
+                if (CanWalk)
+                {
+                    _animator.SetBool("Running", true);
+                    Quaternion targetRotation = Quaternion.LookRotation(path.lookPoints[pathIndex] - transform.position);
+                    transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * Agility / 5f);
+                    transform.Translate(Vector3.forward * Speed * Time.deltaTime, Space.Self);
+                }
+                else
+                    _animator.SetBool("Running", false);
             }
-            else 
-                //_rb.velocity = Vector3.zero;
-
-            Debug.Log(this.gameObject.name + "Following path: " + followingPath);
 
             yield return null;
         }
@@ -159,23 +148,20 @@ public class CharacterController : MonoBehaviour
     void StopCharacter()
     {
         if (!CanWalk)
-        {
-            //_agent.isStopped = true;
             StartCoroutine(CharacterRest());
-        }
-        else
-        {
-            //_agent.isStopped = false;
-        }
 
-        //if(_agent.velocity.x != 0 && _agent.velocity.z != 0)
-         //   DurabilitySystem();
+        if(followingPath)
+            DurabilitySystem();
     }
 
     void DurabilitySystem()
     {
-        if (stamina <= 0) CanWalk = false;
-        stamina -= Time.deltaTime;
+        if (stamina <= 0) 
+            CanWalk = false;
+        else
+            stamina -= Time.deltaTime;
+
+        staminaBar.value = stamina;
     }
 
     IEnumerator CharacterRest()

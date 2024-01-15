@@ -16,7 +16,13 @@ MonoBehaviour:
   m_Data:
     m_SerializedData: []
   m_GUID: 66c7329d5232b2641affe7e53ad73a3c
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 15211f3a5d35cd84091bed64b76f7374
+    m_Address: Assets/Prefabs/Map.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - WorldMap
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 493ac37c41f36ec4bbff29d5a3900a49, type: 2}
   m_SchemaSet:

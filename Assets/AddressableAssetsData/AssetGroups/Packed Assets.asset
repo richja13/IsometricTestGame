@@ -20,17 +20,20 @@ MonoBehaviour:
   - m_GUID: 09de9f821b720734b9fa509106de0738
     m_Address: Assets/Characters/Character1.asset
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - Characters
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f3ca005d716431741a5a7f9d9476889e
     m_Address: Assets/Characters/Character2.asset
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - Characters
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f95b72934f3960d4fb372c4ef2e15d26
     m_Address: Assets/Characters/Character3.asset
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - Characters
     FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 493ac37c41f36ec4bbff29d5a3900a49, type: 2}

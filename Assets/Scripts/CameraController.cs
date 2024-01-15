@@ -12,6 +12,7 @@ public class CameraController : MonoBehaviour
 
     void Update()
     {
+        if (target is null) return; 
         FollowTarger();
     }
 

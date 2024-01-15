@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.UI;
@@ -9,7 +10,8 @@ public class CharactersManager : MonoBehaviour
 {
     [SerializeField]
     private GameObject CharacterToSpawn;
-    public SpawningCharactersManager[] spawnCharacters;
+
+    private List<SpawningCharactersManager> spawnCharacters = new();
     [SerializeField]
     private Button CharacterButton;
     [SerializeField]
@@ -22,18 +24,21 @@ public class CharactersManager : MonoBehaviour
     [SerializeField]
     private Button SaveButton;
 
+    private GameObject LeaderPointer;
+
     private string saveFilePath = "/saveGame";
 
     private void Awake()
     {
-        SpawnCharacters();
+        LeaderPointer = GameObject.Find("SelectedCharacter");
+        StartCoroutine(GetScriptableObjects());
         SaveButton.onClick.AddListener(SaveCharacterStats);
         LoadButton.onClick.AddListener(LoadCharactersStats);
     }
 
     void SpawnCharacters()
     {
-        for (int i = 0; i < spawnCharacters.Length; i++)
+        for (int i = 0; i < spawnCharacters.Count; i++)
         {
             GameObject currentCharacter = Instantiate(CharacterToSpawn, spawnCharacters[i].spawnPoints, Quaternion.identity);
             var model = Instantiate(spawnCharacters[i].Model, currentCharacter.transform.position, Quaternion.identity);
@@ -50,16 +55,17 @@ public class CharactersManager : MonoBehaviour
 
             SpawnedCharacters.Add(currentCharacter);
             if (i is 0) SetLeader(currentCharacter);
-            CreateButtons(i);
+            CreateButtons(i, controller);
         }
     }
 
-    void CreateButtons(int i)
+    void CreateButtons(int i, CharacterController controller)
     {
         Button button = Instantiate(CharacterButton, ButtonContainer.transform);
         button.GetComponentInChildren<TMP_Text>().text = spawnCharacters[i].characterName;
         int tempValue = i;
         button.onClick.AddListener(delegate { ChangeCharacters(tempValue); });
+        controller.staminaBar = button.transform.Find("Slider").GetComponent<Slider>();
     }
 
     void ChangeCharacters(int CharacterID)
@@ -68,8 +74,8 @@ public class CharactersManager : MonoBehaviour
         {
             character.GetComponent<CharacterController>().isLeader = false;
         }
-
-        SetLeader(SpawnedCharacters[CharacterID]);
+        var leader = SpawnedCharacters[CharacterID];
+        SetLeader(leader);
     }
 
     private void SetLeader(GameObject leader)
@@ -77,6 +83,9 @@ public class CharactersManager : MonoBehaviour
         Leader = leader;
         leader.GetComponent<CharacterController>().isLeader = true;
         CameraController.target = leader.transform;
+
+        LeaderPointer.transform.parent = leader.transform;
+        LeaderPointer.transform.position = leader.transform.position;
     }
 
     void LoadCharactersStats()
@@ -87,6 +96,20 @@ public class CharactersManager : MonoBehaviour
             var character = SpawnedCharacters[i].GetComponent<CharacterController>();
             character.LoadParameters(stats[i].Speed, stats[i].Agility, stats[i].Durability);
         }
+    }
+    
+    public IEnumerator GetScriptableObjects()
+    {
+        while (!LoadCharacters.CharactersLoaded)
+            yield return null;
+
+        List<SpawningCharactersManager> list = LoadCharacters.characterList;
+
+        foreach (SpawningCharactersManager character in list)
+        {
+            spawnCharacters.Add(character);
+        }
+        SpawnCharacters();
     }
 
     void SaveCharacterStats()

@@ -1,24 +1,33 @@
 using System.Collections;
-using System.Collections.Generic;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 public class LoadWorldMap : MonoBehaviour
 {
-    void Start()
+    [SerializeField]
+    private string key;
+
+    AsyncOperationHandle<GameObject> opHandle;
+
+    public static bool MapLoaded;
+
+    private void Awake()
     {
-        
+        MapLoaded = false;
+        StartCoroutine("LoadWalls");
     }
 
-    // Update is called once per frame
-    void Update()
+    public IEnumerator LoadWalls()
     {
+        opHandle = Addressables.LoadAssetAsync<GameObject>(key);
+        yield return opHandle;
 
-    }
-    
-    public async void LoadWalls()
-    {
-
+        if (opHandle.Status == AsyncOperationStatus.Succeeded)
+        {
+            GameObject obj = opHandle.Result;
+            Instantiate(obj, transform);
+            MapLoaded = true;
+        }
     }
 }
