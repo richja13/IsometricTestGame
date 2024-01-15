@@ -1,9 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
+using Unity.Burst.CompilerServices;
 using UnityEngine;
 using UnityEngine.AI;
 using static UnityEditor.PlayerSettings;
+using static UnityEngine.GraphicsBuffer;
 
 public class CharacterController : MonoBehaviour
 {
@@ -23,18 +25,18 @@ public class CharacterController : MonoBehaviour
     private float turnDst = 1;
 
     public Animator _animator;
+    public Rigidbody _rb;
 
     private void Awake()
     {
-        //_agent = GetComponent<NavMeshAgent>();
         _camera = Camera.main;
+        _rb = GetComponent<Rigidbody>();
         CanWalk = true;
     }
 
     private void Start()
     {
         LoadParameters(Durability, Speed, Agility);
-
         StartCoroutine(UpdatePath());
     }
 
@@ -58,16 +60,15 @@ public class CharacterController : MonoBehaviour
         StopCharacter();
     }
 
+
     void SetPosition()
     {
         if(Input.GetMouseButtonDown(0))
         {
             Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
-            if (Physics.Raycast(ray, out RaycastHit hit)) Destination = hit.point;
-            if (Destination == null) return;
-            _animator.SetBool("Running", true);
-            var target = (isLeader) ? Destination : CharactersManager.Leader.transform.position;
-            PathRequestManager.instance.RequestPath(transform.position, target, OnPathFound);
+            if (Physics.Raycast(ray, out RaycastHit hit))
+                Destination = (isLeader) ? hit.point : CharactersManager.Leader.transform.position;
+            PathRequestManager.RequestPath(new PathRequest(transform.position, Destination, OnPathFound));
         }
     }
 
@@ -75,19 +76,21 @@ public class CharacterController : MonoBehaviour
     {
         if (pathSuccessfull)
         {
+            _animator.SetBool("Running", true);
             path = new Path(waypoints, transform.position, turnDst);
+            if (waypoints.Length is 0) return;
             StopCoroutine("FollowPath");
             StartCoroutine("FollowPath");
         }
     }
 
-    IEnumerator FollowPath()
+    public IEnumerator FollowPath()
     {
         bool followingPath = true;
         int pathIndex = 0;
-
         transform.LookAt(path.lookPoints[0]);
-        while(followingPath)
+
+        while (followingPath)
         {
             Vector2 pos2D = new(transform.position.x, transform.position.z);
             while (path.turnBoundaries[pathIndex].HasCrossedLine(pos2D))
@@ -100,27 +103,43 @@ public class CharacterController : MonoBehaviour
                 }
                 else
                     pathIndex++;
+
+                if (pathIndex == path.finishLineIndex - 1)
+                    if (Vector3.Distance(path.lookPoints[pathIndex], path.lookPoints[path.finishLineIndex]) < 1.2f)
+                    {
+                        _animator.SetBool("Running", false);
+                        followingPath = false;
+                        break;
+                    };
             }
+
+            Debug.Log(Vector3.Distance(path.lookPoints[pathIndex], path.lookPoints[path.finishLineIndex]));
 
             if (followingPath)
             {
                 Quaternion targetRotation = Quaternion.LookRotation(path.lookPoints[pathIndex] - transform.position);
                 transform.rotation = Quaternion.Lerp(transform.rotation, targetRotation, Time.deltaTime * Agility/5f);
-                transform.Translate(Vector3.forward * Time.deltaTime * Speed, Space.Self);
+                transform.Translate(Vector3.forward * Speed * Time.deltaTime, Space.Self);
+
+                //Vector3 localVelocity = transform.forward * Speed * Time.fixedDeltaTime * 80;
+                //_rb.velocity = localVelocity;
             }
+            else 
+                //_rb.velocity = Vector3.zero;
+
+            Debug.Log(this.gameObject.name + "Following path: " + followingPath);
 
             yield return null;
         }
     }
 
-    IEnumerator UpdatePath()
+    public IEnumerator UpdatePath()
     {
         var target = (isLeader) ? Destination : CharactersManager.Leader.transform.position;
-
-        if (Time.timeSinceLevelLoad < .3f)
+        if (Time.timeSinceLevelLoad < 2f)
             yield return new WaitForSeconds(.3f);
 
-        PathRequestManager.instance.RequestPath(transform.position, target, OnPathFound);
+        PathRequestManager.RequestPath(new PathRequest(transform.position, target, OnPathFound));
 
         float sqrMoveTreshold = pathUpdateMoveThreshold * pathUpdateMoveThreshold;
         Vector3 targetPosOld = target;
@@ -128,9 +147,12 @@ public class CharacterController : MonoBehaviour
         while(true)
         {
             yield return new WaitForSeconds(minPathUpdateTime);
-            if((target - targetPosOld).sqrMagnitude > sqrMoveTreshold)
-                PathRequestManager.instance.RequestPath(transform.position, target, OnPathFound);
-            targetPosOld = target;
+            target = (isLeader) ? Destination : CharactersManager.Leader.transform.position;
+            if ((target - targetPosOld).sqrMagnitude > sqrMoveTreshold)
+            {
+                PathRequestManager.RequestPath(new PathRequest(transform.position, target, OnPathFound));
+                targetPosOld = target;
+            }
         }
     }
 
@@ -173,5 +195,4 @@ public class CharacterController : MonoBehaviour
             path.DrawWithGizmos();
         }
     }
-
-    }
+}

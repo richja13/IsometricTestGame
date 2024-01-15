@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using UnityEngine;
 
 public class AStarPathfinding : MonoBehaviour
@@ -14,20 +15,18 @@ public class AStarPathfinding : MonoBehaviour
         grid = GetComponent<GridGenerate>();
     }
 
-
-    public void StartFindPath(Vector3 startPos, Vector3 targetPos)
+    public void FindPath(PathRequest request, Action<PathResult> callback)
     {
-        StartCoroutine(FindPath(startPos, targetPos));
-    }
 
-    IEnumerator FindPath(Vector3 startPos, Vector3 targetPos)
-    {
+        Stopwatch sw = new Stopwatch();
+        sw.Start();
 
         Vector3[] waypoints = new Vector3[0];
         bool pathSuccess = false;
 
-        Node startNode = grid.NodeFromWorldPoint(startPos);
-        Node targetNode = grid.NodeFromWorldPoint(targetPos);
+        Node startNode = grid.NodeFromWorldPoint(request.pathStart);
+        Node targetNode = grid.NodeFromWorldPoint(request.pathEnd);
+        startNode.parent = startNode;
 
 
         if (startNode.walkable && targetNode.walkable)
@@ -43,6 +42,8 @@ public class AStarPathfinding : MonoBehaviour
 
                 if (currentNode == targetNode)
                 {
+                    sw.Stop();
+                    //print ("Path found: " + sw.ElapsedMilliseconds + " ms");
                     pathSuccess = true;
                     break;
                 }
@@ -54,7 +55,7 @@ public class AStarPathfinding : MonoBehaviour
                         continue;
                     }
 
-                    int newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour);
+                    int newMovementCostToNeighbour = currentNode.gCost + GetDistance(currentNode, neighbour) + neighbour.movementPenalty;
                     if (newMovementCostToNeighbour < neighbour.gCost || !openSet.Contains(neighbour))
                     {
                         neighbour.gCost = newMovementCostToNeighbour;
@@ -63,18 +64,21 @@ public class AStarPathfinding : MonoBehaviour
 
                         if (!openSet.Contains(neighbour))
                             openSet.Add(neighbour);
+                        else
+                            openSet.UpdateItem(neighbour);
                     }
                 }
             }
         }
-        yield return null;
         if (pathSuccess)
         {
             waypoints = RetracePath(startNode, targetNode);
+            pathSuccess = waypoints.Length > 0;
         }
-        requestManager.FinishedProcessingPath(waypoints, pathSuccess);
+        callback(new PathResult(waypoints, pathSuccess, request.callback));
 
     }
+
 
     Vector3[] RetracePath(Node startNode, Node endNode)
     {
@@ -124,20 +128,22 @@ public class Node : IHeapItem<Node>
 {
     public bool walkable;
     public Vector3 worldPosition;
-    public int gridX;
+	public int gridX;
     public int gridY;
+    public int movementPenalty;
 
     public int gCost;
     public int hCost;
     public Node parent;
     int heapIndex;
 
-    public Node(bool _walkable, Vector3 _worldPos, int _gridX, int _gridY)
+    public Node(bool _walkable, Vector3 _worldPos, int _gridX, int _gridY, int _penalty)
     {
         walkable = _walkable;
         worldPosition = _worldPos;
         gridX = _gridX;
         gridY = _gridY;
+        movementPenalty = _penalty;
     }
 
     public int fCost

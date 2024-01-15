@@ -11,30 +11,38 @@ public class GridGenerate : MonoBehaviour
     public float nodeRadius;
     public LayerMask WallsMask;
 
-    float nodeDiamater;
+    float nodeDiameter;
     int gridSizeX, gridSizeY;
-
+    public int obstacleProximityPenalty = 10;
 
     private void Awake()
     {
-        nodeDiamater = nodeRadius * 2;
-        gridSizeX = Mathf.RoundToInt(gridWorldSize.x / nodeDiamater);
-        gridSizeY = Mathf.RoundToInt(gridWorldSize.y / nodeDiamater);
+        nodeDiameter = nodeRadius * 2;
+        gridSizeX = Mathf.RoundToInt(gridWorldSize.x / nodeDiameter);
+        gridSizeY = Mathf.RoundToInt(gridWorldSize.y / nodeDiameter);
         CreateGrid();
     }
 
     void CreateGrid()
     {
         grid = new Node[gridSizeX, gridSizeY];
-        Vector3 worldBottomLeft = transform.position - Vector3.right * gridWorldSize.x/2 - Vector3.forward * gridWorldSize.y/2;
+        Vector3 worldBottomLeft = transform.position - Vector3.right * gridWorldSize.x / 2 - Vector3.forward * gridWorldSize.y / 2;
 
-        for(int x = 0; x < gridSizeX; x++)
+        for (int x = 0; x < gridSizeX; x++)
         {
-            for(int y = 0; y < gridSizeY; y++)
+            for (int y = 0; y < gridSizeY; y++)
             {
-                Vector3 worldPoint = worldBottomLeft + Vector3.right * (x * nodeDiamater + nodeRadius) + Vector3.forward * (y * nodeDiamater + nodeRadius);
-                bool walkable = !Physics.CheckSphere(worldPoint, nodeRadius, WallsMask);
-                grid[x, y] = new Node(walkable, worldPoint, x, y);
+                Vector3 worldPoint = worldBottomLeft + Vector3.right * (x * nodeDiameter + nodeRadius) + Vector3.forward * (y * nodeDiameter + nodeRadius);
+                bool walkable = !(Physics.CheckSphere(worldPoint, nodeRadius, WallsMask));
+
+                int movementPenalty = 0;
+
+                if (!walkable)
+                {
+                    movementPenalty += obstacleProximityPenalty;
+                }
+
+                grid[x, y] = new Node(walkable, worldPoint, x, y, movementPenalty);
             }
         }
     }
@@ -96,7 +104,7 @@ public class GridGenerate : MonoBehaviour
                         Debug.Log(n.gridX + n.gridY);
                         Gizmos.color = Color.yellow;
                     }
-                Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiamater - 0.1f));
+                Gizmos.DrawCube(n.worldPosition, Vector3.one * (nodeDiameter - 0.1f));
             };
     }
 }
