@@ -1,9 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.AI;
 using UnityEngine.UI;
 
 public class CharactersManager : MonoBehaviour
@@ -47,19 +45,22 @@ public class CharactersManager : MonoBehaviour
             var character = spawnCharacters[i];
             currentCharacter.name = character.characterName;
 
-            var controller = currentCharacter.GetComponent<CharacterController>();
-            controller.Speed = character.Speed;
-            controller.Durability = character.Durability;
-            controller.Agility = character.Agility;
+            var controller = currentCharacter.GetComponent<MovementController>();
             controller._animator = model.GetComponent<Animator>();
 
+            if (i is 0)
+            {
+                controller.Speed = character.Speed;
+                SetLeader(currentCharacter);
+            }
+            controller.LoadParameters(character.Speed, character.Agility, character.Durability);
+
             SpawnedCharacters.Add(currentCharacter);
-            if (i is 0) SetLeader(currentCharacter);
             CreateButtons(i, controller);
         }
     }
 
-    void CreateButtons(int i, CharacterController controller)
+    void CreateButtons(int i, MovementController controller)
     {
         Button button = Instantiate(CharacterButton, ButtonContainer.transform);
         button.GetComponentInChildren<TMP_Text>().text = spawnCharacters[i].characterName;
@@ -70,18 +71,28 @@ public class CharactersManager : MonoBehaviour
 
     void ChangeCharacters(int CharacterID)
     {
-        foreach(GameObject character in SpawnedCharacters)
+        foreach (GameObject character in SpawnedCharacters)
         {
-            character.GetComponent<CharacterController>().isLeader = false;
+            var controller = character.GetComponent<MovementController>();
+            controller.isLeader = false;
         }
+
         var leader = SpawnedCharacters[CharacterID];
         SetLeader(leader);
+
+      /*  for(int i = 0; i < SpawnedCharacters.Count; i++)
+        {
+            var character = spawnCharacters[i];
+            var controller = SpawnedCharacters[i].GetComponent<MovementController>();
+            controller.Speed = character.Speed;
+            controller.LoadParameters(character.Speed, character.Agility, character.Durability);
+        }*/
     }
 
     private void SetLeader(GameObject leader)
     {
         Leader = leader;
-        leader.GetComponent<CharacterController>().isLeader = true;
+        leader.GetComponent<MovementController>().isLeader = true;
         CameraController.target = leader.transform;
 
         LeaderPointer.transform.parent = leader.transform;
@@ -93,7 +104,7 @@ public class CharactersManager : MonoBehaviour
         List<SaveData> stats = SaveGameSystem.LoadPlayerData(saveFilePath);
         for(int i = 0; i < SpawnedCharacters.Count; i++)
         {
-            var character = SpawnedCharacters[i].GetComponent<CharacterController>();
+            var character = SpawnedCharacters[i].GetComponent<MovementController>();
             character.LoadParameters(stats[i].Speed, stats[i].Agility, stats[i].Durability);
         }
     }
@@ -109,6 +120,7 @@ public class CharactersManager : MonoBehaviour
         {
             spawnCharacters.Add(character);
         }
+
         SpawnCharacters();
     }
 
@@ -118,13 +130,12 @@ public class CharactersManager : MonoBehaviour
         foreach(GameObject obj in SpawnedCharacters)
         {
             SaveData stats = new();
-            var character = obj.GetComponent<CharacterController>();
+            var character = obj.GetComponent<MovementController>();
             stats.Speed = character.Speed;
             stats.Durability = character.Durability;
             stats.Agility = character.Agility;
             save.Add(stats);            
         }
-        
         SaveGameSystem.SavePlayerData(save, saveFilePath);
     }
 }

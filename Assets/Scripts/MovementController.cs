@@ -1,9 +1,9 @@
 using System.Collections;
-using UnityEditor.Build;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class CharacterController : MonoBehaviour
+public class MovementController : MonoBehaviour
 {
     const float pathUpdateMoveThreshold = .5f;
     const float minPathUpdateTime = .2f;
@@ -23,6 +23,7 @@ public class CharacterController : MonoBehaviour
     public Animator _animator;
     bool followingPath = false;
     public Slider staminaBar;
+    public static Transform targetPointer;
 
     private void Awake()
     {
@@ -35,6 +36,7 @@ public class CharacterController : MonoBehaviour
         LoadParameters(Durability, Speed, Agility);
         StartCoroutine(UpdatePath());
         staminaBar.maxValue = Durability;
+        targetPointer = GameObject.Find("Target").transform;
     }
 
     void Update()
@@ -45,10 +47,9 @@ public class CharacterController : MonoBehaviour
 
     public void LoadParameters(float speed, float agility, float durability)
     {
-        CharacterController leader = CharactersManager.Leader.GetComponent<CharacterController>();
+        MovementController leader = CharactersManager.Leader.GetComponent<MovementController>();
         //Speed = (leader.Speed < speed) ? leader.Speed : speed;
         Speed = speed;
-
         Durability = durability;
         Agility = agility;
         stamina = Durability;
@@ -58,6 +59,7 @@ public class CharacterController : MonoBehaviour
     {
         if(Input.GetMouseButtonDown(0))
         {
+            if (EventSystem.current.IsPointerOverGameObject()) return;
             Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit))
                 Destination = (isLeader) ? hit.point : CharactersManager.Leader.transform.position;
@@ -81,6 +83,8 @@ public class CharacterController : MonoBehaviour
         followingPath = true;
         int pathIndex = 0;
         transform.LookAt(path.lookPoints[0]);
+        if (isLeader)
+            targetPointer.position = path.lookPoints[path.finishLineIndex];
 
         while (followingPath)
         {
@@ -97,7 +101,7 @@ public class CharacterController : MonoBehaviour
                     pathIndex++;
 
                 if (pathIndex == path.finishLineIndex - 1)
-                    if (Vector3.Distance(path.lookPoints[pathIndex], path.lookPoints[path.finishLineIndex]) < 1.2f)
+                    if (Vector3.Distance(transform.position, path.lookPoints[path.finishLineIndex]) < 1.5f)
                     {
                         _animator.SetBool("Running", false);
                         followingPath = false;
@@ -181,4 +185,19 @@ public class CharacterController : MonoBehaviour
             path.DrawWithGizmos();
         }
     }
+
+    public void OnCollisionEnter(Collision collision)
+    {
+        if (collision.gameObject.tag is "Player")
+        {
+            Vector3 oppositeDirection = -collision.contacts[0].normal;
+            transform.Translate(oppositeDirection * Speed * Time.deltaTime);
+
+#if UNITY_EDITOR || DEBUG
+            Debug.Log($"Collision between {this.gameObject.name} and {collision.gameObject.name} in {collision.transform.position}");
+#endif
+        }
+    }
+
+    
 }

@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Character2
   m_EditorClassIdentifier: 
   characterName: Andy
-  spawnPoints: {x: 0.5, y: 0, z: 0}
+  spawnPoints: {x: 0.5, y: 0, z: -0.5}
   Model: {fileID: 3892841305218998328, guid: f4e8bbb3143acd748b76c65e9f3d676b, type: 3}

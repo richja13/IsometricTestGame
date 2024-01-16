@@ -15,7 +15,7 @@ public class SpawningCharactersManager : ScriptableObject, ICharacter
     private void OnEnable()
     {
         Durability = GenerateRandomStats.GenerateRandomValue(1, 4);
-        Speed = GenerateRandomStats.GenerateRandomValue(9, 12);
+        Speed = GenerateRandomStats.GenerateRandomValue(10, 20);
         Agility = GenerateRandomStats.GenerateRandomValue(5, 9);
     }
 }
