@@ -13,7 +13,5 @@ MonoBehaviour:
   m_Name: Character1
   m_EditorClassIdentifier: 
   characterName: John
-  spawnPoints: {x: 0, y: 3.35, z: 0}
-  Speed: 13.781716
-  Agility: 10.3289585
-  Durability: 1.5803442
+  spawnPoints: {x: 0, y: 0, z: 0}
+  Model: {fileID: 9070810025529155695, guid: f93e70ebf67edc34fa37530aacb46e73, type: 3}
